@@ -1,0 +1,14 @@
+# Private project files
+CLAUDE.md
+roadmap/
+design/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# macOS
+.DS_Store
