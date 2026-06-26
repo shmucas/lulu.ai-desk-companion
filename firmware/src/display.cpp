@@ -11,12 +11,12 @@
  *   Eyes centered horizontally, separated by 14px gap between centers
  *
  * Six states from DESIGN.md, scaled to 2px pixel unit:
- *   IDLE      — open 7×6 ap eyes + smile
- *   STANDBY   — half-closed (top 3 ap blocked) + faint smile
- *   LISTENING — wide 9×7 ap eyes + smile
- *   THINKING  — squinted eyes + flat line
- *   SPEAKING  — arc eyes + wide smile
- *   ERROR     — drooping eyes + frown
+ *   IDLE      - open 7×6 ap eyes + smile
+ *   STANDBY   - half-closed (top 3 ap blocked) + faint smile
+ *   LISTENING - wide 9×7 ap eyes + smile
+ *   THINKING  - squinted eyes + flat line
+ *   SPEAKING  - arc eyes + wide smile
+ *   ERROR     - drooping eyes + frown
  */
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -64,10 +64,10 @@ static void draw_idle() {
 
 static void draw_standby() {
     _oled.clearDisplay();
-    // Eyes: top 3 ap blocked (half-closed — droopy)
+    // Eyes: top 3 ap blocked (half-closed - droopy)
     ap(11, 13, 7, 3);   // left eye (only bottom half visible)
     ap(25, 13, 7, 3);   // right eye
-    // Faint smile (dimmer — draw dots only)
+    // Faint smile (dimmer - draw dots only)
     ap(13, 18, 1, 1);
     ap(15, 19, 6, 1);
     ap(21, 18, 1, 1);
@@ -90,7 +90,7 @@ static void draw_listening() {
 
 static void draw_thinking() {
     _oled.clearDisplay();
-    // Eyes: squinted — only bottom 2 ap rows, angled inward
+    // Eyes: squinted - only bottom 2 ap rows, angled inward
     // left eye: bottom-left corner angled
     ap(11, 13, 5, 2);
     ap(13, 15, 3, 1);
@@ -124,7 +124,7 @@ static void draw_speaking() {
 
 static void draw_error() {
     _oled.clearDisplay();
-    // Eyes: drooping — bottom 2 ap rows only
+    // Eyes: drooping - bottom 2 ap rows only
     ap(11, 14, 7, 2);   // left
     ap(25, 14, 7, 2);   // right
     // Frown

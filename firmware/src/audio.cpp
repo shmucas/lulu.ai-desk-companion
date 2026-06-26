@@ -1,5 +1,5 @@
 /*
- * I2S audio — capture (INMP441) and playback (MAX98357A).
+ * I2S audio - capture (INMP441) and playback (MAX98357A).
  *
  * XIAO ESP32-S3 has one I2S peripheral that can be reconfigured.
  * We use a single I2S instance, swapping config between capture and playback.

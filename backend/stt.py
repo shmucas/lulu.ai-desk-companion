@@ -18,7 +18,7 @@ def load():
 
 def transcribe(pcm_bytes: bytes, sample_rate: int = AUDIO_SAMPLE_RATE) -> str:
     if _model is None:
-        raise RuntimeError("STT model not loaded — call stt.load() first")
+        raise RuntimeError("STT model not loaded - call stt.load() first")
 
     audio = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
 

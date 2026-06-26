@@ -1,5 +1,5 @@
 /*
- * Lulu — XIAO ESP32-S3 firmware
+ * Lulu - XIAO ESP32-S3 firmware
  *
  * State machine:
  *   IDLE      → button press → RECORDING
@@ -69,14 +69,14 @@ void handle_button() {
     g_button_last = pressed ? LOW : HIGH;
 
     if (pressed && g_state == State::IDLE && ws_is_connected()) {
-        Serial.println("[main] button pressed — start recording");
+        Serial.println("[main] button pressed - start recording");
         g_state = State::RECORDING;
         audio_capture_start();
         ws_send_json("{\"type\":\"button_pressed\"}");
     }
 
     if (!pressed && g_state == State::RECORDING) {
-        Serial.println("[main] button released — end recording");
+        Serial.println("[main] button released - end recording");
         audio_capture_stop();
         g_state = State::WAITING;
         ws_send_json("{\"type\":\"audio_end\"}");

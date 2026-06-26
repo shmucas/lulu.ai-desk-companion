@@ -11,7 +11,7 @@
 #define SERVER_PORT 7001
 #define SERVER_PATH "/ws"
 
-// ── I2S Microphone (INMP441) — XIAO ESP32-S3 pins ───────────────────────────
+// ── I2S Microphone (INMP441) - XIAO ESP32-S3 pins ───────────────────────────
 #define MIC_BCK_PIN  7    // D8
 #define MIC_WS_PIN   8    // D9
 #define MIC_DATA_PIN 9    // D10
@@ -29,7 +29,7 @@
 #define OLED_ADDR    0x3C
 
 // ── Button (push-to-talk) ────────────────────────────────────────────────────
-#define BUTTON_PIN   1    // D0 — active LOW (press = GND)
+#define BUTTON_PIN   1    // D0 - active LOW (press = GND)
 
 // ── Audio ────────────────────────────────────────────────────────────────────
 #define AUDIO_SAMPLE_RATE   16000

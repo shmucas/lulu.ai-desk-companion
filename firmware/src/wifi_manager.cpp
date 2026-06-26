@@ -21,7 +21,7 @@ void wifi_init() {
         Serial.print("[WiFi] connected, IP: ");
         Serial.println(WiFi.localIP());
     } else {
-        Serial.println("\n[WiFi] failed — restarting");
+        Serial.println("\n[WiFi] failed - restarting");
         ESP.restart();
     }
 }

@@ -1,8 +1,8 @@
 """
-Lulu backend — FastAPI server for ESP32-S3 desk companion.
+Lulu backend - FastAPI server for ESP32-S3 desk companion.
 
-WebSocket /ws  — audio streaming + state control for the XIAO ESP32-S3
-GET     /health — liveness check
+WebSocket /ws  - audio streaming + state control for the XIAO ESP32-S3
+GET     /health - liveness check
 """
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
