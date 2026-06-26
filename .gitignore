@@ -10,5 +10,13 @@ __pycache__/
 *.pyo
 .pytest_cache/
 
+# Piper voice models (downloaded separately, large binaries)
+*.onnx
+*.onnx.json
+
 # macOS
 .DS_Store
+
+# Agent skills and artifacts
+.agents/
+.lavish/
