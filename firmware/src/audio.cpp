@@ -8,6 +8,7 @@
  * Playback: 22050Hz, 16-bit, stereo (MAX98357A expects stereo frames; mono
  *           PCM is duplicated on both channels via channel_format)
  */
+#include <Arduino.h>
 #include <driver/i2s.h>
 #include "audio.h"
 #include "config.h"
