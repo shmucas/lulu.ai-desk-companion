@@ -7,6 +7,7 @@ Tool results are appended as assistant messages (no tool/system roles).
 Loop is capped at MAX_TOOL_ITERATIONS.
 """
 import asyncio
+import traceback
 from datetime import datetime
 
 import httpx
@@ -68,6 +69,8 @@ async def run_pipeline(transcript: str, history: list[dict]) -> ConversationResp
         return await loop.run_in_executor(None, ollama_client.call_conv, conv_messages)
 
     except (httpx.ConnectError, httpx.ConnectTimeout):
+        print("[llm] cannot reach Ollama - is it running? (ollama serve)", flush=True)
         return _ERROR_RESPONSE
     except Exception:
+        print("[llm] pipeline error:\n" + traceback.format_exc(), flush=True)
         return _ERROR_RESPONSE

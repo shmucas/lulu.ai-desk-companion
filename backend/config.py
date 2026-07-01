@@ -11,3 +11,9 @@ PIPER_MODEL = os.getenv("PIPER_MODEL", "en_US-lessac-medium.onnx")
 
 AUDIO_SAMPLE_RATE = 16000
 TTS_SAMPLE_RATE = 22050
+
+# Where Lulu's voice comes out:
+#   "esp32" - stream TTS audio to the device speaker (MAX98357A)
+#   "mac"   - play TTS on the Mac's default output device (also covers a
+#             Bluetooth speaker: just connect it and set it as Mac output)
+PLAYBACK = os.getenv("PLAYBACK", "esp32")

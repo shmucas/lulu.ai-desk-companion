@@ -1,3 +1,5 @@
+import traceback
+
 import httpx
 from config import OLLAMA_HOST, AGENT_MODEL, CONV_MODEL
 from schemas import ToolCall, ConversationResponse
@@ -29,6 +31,7 @@ def call_agent(messages: list[dict]) -> ToolCall:
     except (httpx.ConnectError, httpx.ConnectTimeout):
         raise
     except Exception:
+        print(f"[ollama] agent call failed ({AGENT_MODEL}):\n" + traceback.format_exc(), flush=True)
         return ToolCall(function="finished", describe="error", parameter={})
 
 
@@ -50,6 +53,7 @@ def call_conv(messages: list[dict]) -> ConversationResponse:
     except (httpx.ConnectError, httpx.ConnectTimeout):
         raise
     except Exception:
+        print(f"[ollama] conv call failed ({CONV_MODEL}):\n" + traceback.format_exc(), flush=True)
         return _ERROR_RESPONSE
 
 
