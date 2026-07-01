@@ -43,4 +43,9 @@
 #define AUDIO_CHUNK_SAMPLES 512           // frames per I2S read
 #define AUDIO_CHUNK_BYTES   (AUDIO_CHUNK_SAMPLES * 2)
 
+// INMP441 sends 24-bit samples left-justified in a 32-bit slot and is quiet,
+// so we read 32-bit and shift down to 16-bit. Smaller shift = louder.
+// If audio clips/distorts, raise this; if too quiet (empty transcripts), lower it.
+#define MIC_GAIN_SHIFT      11
+
 #define TTS_SAMPLE_RATE     22050

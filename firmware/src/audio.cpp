@@ -15,11 +15,23 @@
 
 #define I2S_PORT I2S_NUM_0
 
+// Which direction the single I2S peripheral is currently configured for.
+// Tracked so capture can self-heal if a missed tts_end ever leaves it in
+// playback mode (e.g. the WebSocket dropped while Lulu was speaking).
+enum class I2SMode { NONE, CAPTURE, PLAYBACK };
+static I2SMode _mode = I2SMode::NONE;
+
+static int16_t _capture_peak = 0;
+
 static void _install_capture() {
     i2s_config_t cfg = {
         .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
         .sample_rate = AUDIO_SAMPLE_RATE,
-        .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+        // INMP441 is a 24-bit mic: read 32-bit slots, down-convert in software.
+        .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,
+        // INMP441 speaks on the slot set by its L/R (SEL) pin. SEL must be
+        // tied to GND for this (left) setting; a floating SEL reads as 0.
+        // If SEL is instead tied to 3V3, switch to I2S_CHANNEL_FMT_ONLY_RIGHT.
         .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
         .communication_format = I2S_COMM_FORMAT_STAND_I2S,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
@@ -37,6 +49,7 @@ static void _install_capture() {
     };
     i2s_driver_install(I2S_PORT, &cfg, 0, nullptr);
     i2s_set_pin(I2S_PORT, &pins);
+    _mode = I2SMode::CAPTURE;
 }
 
 static void _install_playback() {
@@ -61,6 +74,7 @@ static void _install_playback() {
     };
     i2s_driver_install(I2S_PORT, &cfg, 0, nullptr);
     i2s_set_pin(I2S_PORT, &pins);
+    _mode = I2SMode::PLAYBACK;
 }
 
 void audio_init() {
@@ -69,6 +83,14 @@ void audio_init() {
 }
 
 void audio_capture_start() {
+    // Self-heal: if a missed tts_end left I2S in playback mode, put it back
+    // into capture mode so the mic never stays dead.
+    if (_mode != I2SMode::CAPTURE) {
+        Serial.println("[audio] I2S not in capture mode - restoring");
+        i2s_driver_uninstall(I2S_PORT);
+        _install_capture();
+    }
+    _capture_peak = 0;
     i2s_start(I2S_PORT);
 }
 
@@ -76,10 +98,33 @@ void audio_capture_stop() {
     i2s_stop(I2S_PORT);
 }
 
+// Reads 32-bit INMP441 samples and returns 16-bit mono PCM in `buf`.
+// `len` is the number of 16-bit PCM bytes requested (buf capacity).
 size_t audio_read_chunk(uint8_t* buf, size_t len) {
+    static int32_t raw[AUDIO_CHUNK_SAMPLES];
+
+    size_t out_samples = len / sizeof(int16_t);
+    if (out_samples > AUDIO_CHUNK_SAMPLES) out_samples = AUDIO_CHUNK_SAMPLES;
+
     size_t bytes_read = 0;
-    i2s_read(I2S_PORT, buf, len, &bytes_read, portMAX_DELAY);
-    return bytes_read;
+    i2s_read(I2S_PORT, raw, out_samples * sizeof(int32_t), &bytes_read, portMAX_DELAY);
+    size_t n = bytes_read / sizeof(int32_t);
+
+    int16_t* out = reinterpret_cast<int16_t*>(buf);
+    for (size_t i = 0; i < n; i++) {
+        int32_t s = raw[i] >> MIC_GAIN_SHIFT;   // 24-bit left-justified -> 16-bit + gain
+        if (s > 32767) s = 32767;
+        else if (s < -32768) s = -32768;
+        out[i] = (int16_t)s;
+
+        int32_t mag = s < 0 ? -s : s;
+        if (mag > _capture_peak) _capture_peak = (int16_t)(mag > 32767 ? 32767 : mag);
+    }
+    return n * sizeof(int16_t);
+}
+
+int16_t audio_capture_peak() {
+    return _capture_peak;
 }
 
 void audio_playback_init() {
