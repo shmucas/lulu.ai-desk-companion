@@ -26,13 +26,18 @@
 
 #define PX 2  // pixel unit in display pixels
 
+// All face geometry is authored centered around art-pixel x=21.5, but the
+// display center is x=32. Shift every element right by 11 ap (22 display px)
+// so the face sits centered on the 128px-wide panel.
+#define OX 11  // horizontal art-pixel offset
+
 static Adafruit_SSD1306 _oled(OLED_WIDTH, OLED_HEIGHT, &Wire, -1);
 static FaceState _current_state = FaceState::IDLE;
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 static void ap(int x, int y, int w, int h) {
-    _oled.fillRect(x * PX, y * PX, w * PX, h * PX, SSD1306_WHITE);
+    _oled.fillRect((x + OX) * PX, y * PX, w * PX, h * PX, SSD1306_WHITE);
 }
 
 static void draw_status(const char* label) {
