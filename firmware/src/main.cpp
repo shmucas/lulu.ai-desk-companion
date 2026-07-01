@@ -1,12 +1,12 @@
 /*
  * Lulu - XIAO ESP32-S3 firmware
  *
- * State machine:
- *   IDLE      → button press → RECORDING
- *   RECORDING → button release → WAITING  (streams audio to Mac)
- *   WAITING   → server sends "speaking" → PLAYING
- *   PLAYING   → server sends tts_end → IDLE
- *   any state → server sends "error" → ERROR → IDLE (after 2s)
+ * State machine (click-to-toggle button):
+ *   IDLE      -> button click -> RECORDING  (streams audio to Mac)
+ *   RECORDING -> button click -> WAITING    (sends audio_end, "done talking")
+ *   WAITING   -> server sends "speaking" -> PLAYING
+ *   PLAYING   -> server sends tts_end -> IDLE
+ *   any state -> server sends "error" -> ERROR -> IDLE (after 2s)
  */
 #include <Arduino.h>
 #include "config.h"
@@ -20,6 +20,11 @@ enum class State { IDLE, RECORDING, WAITING, PLAYING, ERROR_STATE };
 static State g_state = State::IDLE;
 static bool  g_button_last = HIGH;
 static unsigned long g_error_ts = 0;
+static unsigned long g_button_edge_ts = 0;
+
+// Ignore button edges that arrive within this window of the last accepted
+// click, so mechanical contact bounce cannot toggle recording twice.
+static const unsigned long BUTTON_DEBOUNCE_MS = 250;
 
 // ── WebSocket callbacks ──────────────────────────────────────────────────────
 
@@ -64,19 +69,26 @@ void handle_button() {
     bool pressed = (digitalRead(BUTTON_PIN) == LOW);
     bool was_pressed = (g_button_last == LOW);
 
-    // Debounce: only act on edges
+    // Only act on state changes (edges)
     if (pressed == was_pressed) return;
     g_button_last = pressed ? LOW : HIGH;
 
-    if (pressed && g_state == State::IDLE && ws_is_connected()) {
-        Serial.println("[main] button pressed - start recording");
+    // Click-to-toggle: only the press edge matters, ignore the release
+    if (!pressed) return;
+
+    // Debounce: drop press edges that come too soon after the last click
+    unsigned long now = millis();
+    if (now - g_button_edge_ts < BUTTON_DEBOUNCE_MS) return;
+    g_button_edge_ts = now;
+
+    if (g_state == State::IDLE && ws_is_connected()) {
+        Serial.println("[main] button click - start listening");
         g_state = State::RECORDING;
         audio_capture_start();
         ws_send_json("{\"type\":\"button_pressed\"}");
-    }
-
-    if (!pressed && g_state == State::RECORDING) {
-        Serial.println("[main] button released - end recording");
+    } else if (g_state == State::RECORDING) {
+        Serial.printf("[main] button click - done talking (mic peak %d/32767), thinking\n",
+                      audio_capture_peak());
         audio_capture_stop();
         g_state = State::WAITING;
         ws_send_json("{\"type\":\"audio_end\"}");

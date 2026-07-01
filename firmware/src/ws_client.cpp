@@ -32,6 +32,12 @@ static void _event_handler(WStype_t type, uint8_t* payload, size_t len) {
                 if (value && _on_state) _on_state(std::string(value));
             } else if (strcmp(msg_type, "tts_end") == 0) {
                 if (_on_tts_end) _on_tts_end();
+            } else if (strcmp(msg_type, "debug") == 0) {
+                const char* transcript = doc["transcript"] | "";
+                const char* response   = doc["response"] | "";
+                const char* feeling    = doc["feeling"] | "";
+                Serial.printf("[heard] %s\n", transcript);
+                Serial.printf("[reply] %s (%s)\n", response, feeling);
             }
             break;
         }
