@@ -1,6 +1,7 @@
 from tools.weather import WeatherTool
 from tools.search import WebSearchTool
 from tools.time_tool import TimeTool
+from tools.joke import JokeTool
 
 _REGISTRY: dict[str, object] = {}
 
@@ -11,7 +12,7 @@ def _register(*tool_classes):
         _REGISTRY[t.name] = t
 
 
-_register(WeatherTool, WebSearchTool, TimeTool)
+_register(WeatherTool, WebSearchTool, TimeTool, JokeTool)
 
 
 def tool_descriptions() -> str:

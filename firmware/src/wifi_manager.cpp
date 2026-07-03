@@ -27,6 +27,7 @@ void wifi_init() {
         Serial.println();
         Serial.print("[WiFi] connected, IP: ");
         Serial.println(WiFi.localIP());
+        configTzTime(TIME_ZONE, NTP_SERVER);
     } else {
         Serial.println();
         Serial.print("[WiFi] failed, status code: ");

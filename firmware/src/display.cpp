@@ -19,10 +19,12 @@
  *   ERROR     - drooping eyes + frown
  */
 #include <Wire.h>
+#include <time.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "display.h"
 #include "config.h"
+#include "wifi_manager.h"
 
 #define PX 2  // pixel unit in display pixels
 
@@ -47,6 +49,26 @@ static void draw_status(const char* label) {
     _oled.print(label);
 }
 
+static void draw_header() {
+    // Top-left date/time (falls back silently if NTP hasn't synced yet)
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo, 10)) {
+        char buf[16];
+        strftime(buf, sizeof(buf), "%m/%d %H:%M", &timeinfo);
+        _oled.setTextSize(1);
+        _oled.setTextColor(SSD1306_WHITE);
+        _oled.setCursor(2, 0);
+        _oled.print(buf);
+    }
+
+    // Top-right WiFi status bars (ascending, filled when connected)
+    _oled.fillRect(118, 5, 2, 2, SSD1306_WHITE);
+    if (wifi_is_connected()) {
+        _oled.fillRect(121, 3, 2, 4, SSD1306_WHITE);
+        _oled.fillRect(124, 1, 2, 6, SSD1306_WHITE);
+    }
+}
+
 // ── face drawing ─────────────────────────────────────────────────────────────
 // All coordinates in art-pixel units. Origin at top-left of display.
 // Display is 64×32 art pixels (128px / 2 = 64, 64px / 2 = 32).
@@ -56,45 +78,49 @@ static void draw_status(const char* label) {
 
 static void draw_idle() {
     _oled.clearDisplay();
+    draw_header();
     // Eyes: 7×6 ap open square
     ap(11, 10, 7, 6);   // left eye
     ap(25, 10, 7, 6);   // right eye
-    // Smile: 3-rect arc approximation
-    ap(12, 18, 2, 1);
-    ap(14, 19, 8, 1);
-    ap(22, 18, 2, 1);
+    // Smile: 3-rect arc approximation, centered on eye midpoint (21.5 ap)
+    ap(16, 18, 2, 1);
+    ap(18, 19, 8, 1);
+    ap(26, 18, 2, 1);
     draw_status("IDLE");
     _oled.display();
 }
 
 static void draw_standby() {
     _oled.clearDisplay();
+    draw_header();
     // Eyes: top 3 ap blocked (half-closed - droopy)
     ap(11, 13, 7, 3);   // left eye (only bottom half visible)
     ap(25, 13, 7, 3);   // right eye
-    // Faint smile (dimmer - draw dots only)
-    ap(13, 18, 1, 1);
-    ap(15, 19, 6, 1);
-    ap(21, 18, 1, 1);
+    // Faint smile (dimmer - draw dots only), centered on eye midpoint
+    ap(17, 18, 1, 1);
+    ap(19, 19, 6, 1);
+    ap(25, 18, 1, 1);
     draw_status("STANDBY");
     _oled.display();
 }
 
 static void draw_listening() {
     _oled.clearDisplay();
+    draw_header();
     // Eyes: wide 9×7 ap (alert)
     ap(10, 9, 9, 7);    // left eye
     ap(24, 9, 9, 7);    // right eye
-    // Smile same as idle
-    ap(12, 18, 2, 1);
-    ap(14, 19, 8, 1);
-    ap(22, 18, 2, 1);
+    // Smile same as idle, centered on eye midpoint
+    ap(16, 18, 2, 1);
+    ap(18, 19, 8, 1);
+    ap(26, 18, 2, 1);
     draw_status("LISTENING...");
     _oled.display();
 }
 
 static void draw_thinking() {
     _oled.clearDisplay();
+    draw_header();
     // Eyes: squinted - only bottom 2 ap rows, angled inward
     // left eye: bottom-left corner angled
     ap(11, 13, 5, 2);
@@ -102,14 +128,15 @@ static void draw_thinking() {
     // right eye: bottom-right corner angled (mirror)
     ap(27, 13, 5, 2);
     ap(27, 15, 3, 1);
-    // Flat line mouth
-    ap(13, 19, 10, 1);
+    // Flat line mouth, centered on eye midpoint
+    ap(17, 19, 10, 1);
     draw_status("THINKING...");
     _oled.display();
 }
 
 static void draw_speaking() {
     _oled.clearDisplay();
+    draw_header();
     // Eyes: happy arc (top curve only, no box)
     // Left eye arc: 3 segments
     ap(13, 11, 3, 2);
@@ -119,23 +146,24 @@ static void draw_speaking() {
     ap(27, 11, 3, 2);
     ap(25, 12, 2, 2);
     ap(30, 12, 2, 2);
-    // Wide smile: 26ap wide
-    ap(11, 18, 2, 1);
-    ap(13, 19, 10, 2);
-    ap(23, 18, 2, 1);
+    // Wide smile: 26ap wide, centered on eye midpoint
+    ap(15, 18, 2, 1);
+    ap(17, 19, 10, 2);
+    ap(27, 18, 2, 1);
     draw_status("SPEAKING...");
     _oled.display();
 }
 
 static void draw_error() {
     _oled.clearDisplay();
+    draw_header();
     // Eyes: drooping - bottom 2 ap rows only
     ap(11, 14, 7, 2);   // left
     ap(25, 14, 7, 2);   // right
-    // Frown
-    ap(12, 19, 2, 1);
-    ap(14, 18, 8, 1);
-    ap(22, 19, 2, 1);
+    // Frown, centered on eye midpoint
+    ap(16, 19, 2, 1);
+    ap(18, 18, 8, 1);
+    ap(26, 19, 2, 1);
     draw_status("ERROR");
     _oled.display();
 }

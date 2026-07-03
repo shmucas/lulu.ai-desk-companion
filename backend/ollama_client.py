@@ -22,6 +22,7 @@ def call_agent(messages: list[dict]) -> ToolCall:
                 "messages": messages,
                 "stream": False,
                 "format": ToolCall.model_json_schema(),
+                "think": False,
                 "options": {"temperature": 0},
             },
             timeout=_TIMEOUT,
