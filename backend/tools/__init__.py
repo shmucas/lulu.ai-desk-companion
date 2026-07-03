@@ -26,6 +26,10 @@ def execute(name: str, parameter: dict) -> str:
     tool = _REGISTRY.get(name)
     if tool is None:
         return f"Unknown tool: {name!r}. Available: {', '.join(_REGISTRY)}"
+    # The agent model sometimes hallucinates parameter names outside the
+    # declared schema - drop anything it doesn't ask for instead of erroring.
+    known = tool.parameter_spec.keys()
+    parameter = {k: v for k, v in parameter.items() if k in known}
     try:
         return tool.execute(**parameter)
     except Exception as e:
