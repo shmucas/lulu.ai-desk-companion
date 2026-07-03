@@ -6,6 +6,9 @@ CLAUDE.md
 roadmap/
 design/
 
+# Lulu's persistent memory (personal data)
+backend/lulu_memory.json
+
 # Python
 .venv/
 __pycache__/

@@ -13,6 +13,7 @@ import traceback
 from datetime import datetime
 
 import httpx
+import memory_store
 import ollama_client
 import tools
 from config import MAX_TOOL_ITERATIONS
@@ -24,14 +25,24 @@ _ERROR_RESPONSE = ConversationResponse(
 )
 
 
+def _memory_block() -> str:
+    known = memory_store.facts()
+    if not known:
+        return ""
+    listed = "\n".join(f"- {fact}" for fact in known[-15:])
+    return f"\nThings you remember about the user:\n{listed}\n"
+
+
 def _agent_system_prompt() -> str:
     now = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
     return (
         f"You are Lulu, a friendly desk companion. Current time: {now}.\n"
         f"You have access to these tools:\n{tools.tool_descriptions()}\n"
+        f"{_memory_block()}"
         f"Most messages (greetings, chit-chat, opinions, anything you already know) need "
         f"NO tool at all. Only call a tool when the user is explicitly asking for something "
-        f"only a tool can provide (current weather, a live web search, the exact time, a joke). "
+        f"only a tool can provide (current weather, a web search, the exact time, a joke, "
+        f"setting a timer or reminder, or remembering a fact for later). "
         f"If no tool is needed, immediately return function='finished' with an empty parameter "
         f"object - never invent or fabricate a tool result yourself.\n"
         f"Call tools by returning JSON with function, describe, parameter fields. "
@@ -45,6 +56,7 @@ def _conv_system_prompt(context: str | None = None) -> str:
         "Respond naturally based on the conversation, in plain spoken text - "
         "no JSON, no markdown, just what you'd say out loud. "
         "Keep responses short and conversational."
+        + _memory_block()
     )
     if context:
         prompt += f"\n\nUse this information to answer the user's question: {context}"
@@ -64,6 +76,7 @@ async def run_pipeline(transcript: str, history: list[dict]) -> ConversationResp
         last_call = None
         last_result = None
         summary = None
+        fired_side_effects: set[str] = set()
         for _ in range(MAX_TOOL_ITERATIONS):
             tool_call = await loop.run_in_executor(None, ollama_client.call_agent, messages)
             if tool_call.function == "finished":
@@ -73,6 +86,12 @@ async def run_pipeline(transcript: str, history: list[dict]) -> ConversationResp
             if call_key == last_call:
                 # Agent repeated an identical call - it already has this result, stop looping.
                 break
+            if tool_call.function in fired_side_effects:
+                # Small models sometimes re-call a side-effect tool with slightly
+                # different params (two timers for one request). Once is enough.
+                break
+            if tools.has_side_effects(tool_call.function):
+                fired_side_effects.add(tool_call.function)
             last_call = call_key
             last_result = await loop.run_in_executor(
                 None, tools.execute, tool_call.function, tool_call.parameter

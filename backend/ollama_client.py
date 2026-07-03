@@ -18,6 +18,8 @@ _EMOJI_RE = re.compile(
     "\U00002600-\U000027BF"  # misc symbols, dingbats
     "\U0001F1E6-\U0001F1FF"  # regional indicators (flags)
     "\U00002190-\U000021FF"  # arrows
+    "\U00002300-\U000023FF"  # misc technical (stopwatch, hourglass, alarm clock)
+    "\U00002B00-\U00002BFF"  # misc symbols and arrows (stars)
     "️"                 # variation selector (emoji presentation)
     "]+"
 )

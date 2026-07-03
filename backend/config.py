@@ -17,3 +17,12 @@ TTS_SAMPLE_RATE = 22050
 #   "mac"   - play TTS on the Mac's default output device (also covers a
 #             Bluetooth speaker: just connect it and set it as Mac output)
 PLAYBACK = os.getenv("PLAYBACK", "esp32")
+
+# Wake word ("Lulu"). The device streams mic audio continuously while idle;
+# the backend listens for the name and starts a command without the button.
+# Set WAKE_ENABLED=0 to go back to button-only.
+WAKE_ENABLED = os.getenv("WAKE_ENABLED", "1") == "1"
+
+# RMS energy (int16 scale) above which a chunk counts as speech. Raise if
+# background noise triggers wake checks constantly; lower if Lulu misses you.
+WAKE_RMS = int(os.getenv("WAKE_RMS", "500"))

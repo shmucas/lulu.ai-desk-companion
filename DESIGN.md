@@ -129,3 +129,6 @@ Every design decision should serve this feeling. If a change makes Lulu look mor
 | 2026-05-27 | Pixel dissolve at 120ms | Fits retro aesthetic. CSS crossfade was rejected as too generic. |
 | 2026-05-27 | Idle animations suppressed during active states | Each active expression needs to read cleanly - blinking during THINKING breaks concentration read. |
 | 2026-05-27 | Eye pulse during SPEAKING | Mouth animation in pixel art looks choppy. Eye brightness pulse is subtle and works in pure CSS. |
+| 2026-07-03 | Idle blink + glance implemented on the OLED firmware | Blink 3-6s, glance 8-15s per this spec, driven by a non-blocking display_tick() in the firmware loop. Standby blinks slower (6-10s), no glance. |
+| 2026-07-03 | SPEAKING uses a 2-frame mouth cycle on the OLED | The 2026-05-27 eye-pulse decision was about CSS opacity, which the SSD1306 cannot do (1-bit pixels). Alternating smile / open "O" every 160ms reads clearly at 128x64 and looks alive. |
+| 2026-07-03 | Wake word ("Lulu") shipped, backend-detected | Device streams mic audio while idle; the Mac runs whisper on an energy-gated rolling window. Button retained as manual trigger and force-end. |

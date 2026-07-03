@@ -2,6 +2,8 @@ from tools.weather import WeatherTool
 from tools.search import WebSearchTool
 from tools.time_tool import TimeTool
 from tools.joke import JokeTool
+from tools.remember import RememberTool
+from tools.timer import TimerTool, ReminderTool
 
 _REGISTRY: dict[str, object] = {}
 
@@ -12,7 +14,13 @@ def _register(*tool_classes):
         _REGISTRY[t.name] = t
 
 
-_register(WeatherTool, WebSearchTool, TimeTool, JokeTool)
+_register(WeatherTool, WebSearchTool, TimeTool, JokeTool,
+          RememberTool, TimerTool, ReminderTool)
+
+
+def has_side_effects(name: str) -> bool:
+    """True for tools that must not run twice in one request (timers etc.)."""
+    return bool(getattr(_REGISTRY.get(name), "side_effect", False))
 
 
 def tool_descriptions() -> str:

@@ -49,3 +49,7 @@
 #define MIC_GAIN_SHIFT      11
 
 #define TTS_SAMPLE_RATE     22050
+
+// ── Time (NTP) ────────────────────────────────────────────────────────────────
+#define NTP_SERVER "pool.ntp.org"
+#define TIME_ZONE  "EST5EDT,M3.2.0,M11.1.0/2"  // US Eastern, auto DST

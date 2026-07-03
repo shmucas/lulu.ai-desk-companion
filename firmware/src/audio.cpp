@@ -22,6 +22,7 @@ enum class I2SMode { NONE, CAPTURE, PLAYBACK };
 static I2SMode _mode = I2SMode::NONE;
 
 static int16_t _capture_peak = 0;
+static bool _capturing = false;
 
 static void _install_capture() {
     i2s_config_t cfg = {
@@ -92,10 +93,16 @@ void audio_capture_start() {
     }
     _capture_peak = 0;
     i2s_start(I2S_PORT);
+    _capturing = true;
 }
 
 void audio_capture_stop() {
     i2s_stop(I2S_PORT);
+    _capturing = false;
+}
+
+bool audio_is_capturing() {
+    return _capturing;
 }
 
 // Reads 32-bit INMP441 samples and returns 16-bit mono PCM in `buf`.
@@ -107,7 +114,9 @@ size_t audio_read_chunk(uint8_t* buf, size_t len) {
     if (out_samples > AUDIO_CHUNK_SAMPLES) out_samples = AUDIO_CHUNK_SAMPLES;
 
     size_t bytes_read = 0;
-    i2s_read(I2S_PORT, raw, out_samples * sizeof(int32_t), &bytes_read, portMAX_DELAY);
+    // Bounded wait (not portMAX_DELAY): if capture ever stops mid-read, the
+    // main loop must keep servicing WiFi/WS instead of blocking forever.
+    i2s_read(I2S_PORT, raw, out_samples * sizeof(int32_t), &bytes_read, pdMS_TO_TICKS(100));
     size_t n = bytes_read / sizeof(int32_t);
 
     int16_t* out = reinterpret_cast<int16_t*>(buf);
@@ -128,6 +137,7 @@ int16_t audio_capture_peak() {
 }
 
 void audio_playback_init() {
+    _capturing = false;
     i2s_driver_uninstall(I2S_PORT);
     _install_playback();
     Serial.println("[audio] speaker ready (22050Hz stereo)");
@@ -151,4 +161,5 @@ void audio_playback_stop() {
     i2s_driver_uninstall(I2S_PORT);
     _install_capture();
     i2s_start(I2S_PORT);
+    _capturing = true;
 }
