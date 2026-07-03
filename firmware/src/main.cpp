@@ -1,17 +1,17 @@
 /*
  * Lulu - XIAO ESP32-S3 firmware
  *
- * The mic streams continuously whenever the device is IDLE or RECORDING, so
- * the backend can hear the wake word ("Lulu") without a button press. The
- * button still works as a manual trigger and as "done talking".
- *
- * State machine:
- *   IDLE      -> button click, or server "listening" (wake word) -> RECORDING
+ * State machine (click-to-toggle button):
+ *   IDLE      -> button click -> RECORDING  (streams audio to Mac)
  *   RECORDING -> button click (sends audio_end), or server "thinking"
  *                (silence endpoint) -> WAITING
  *   WAITING   -> server sends "speaking" -> PLAYING
- *   PLAYING   -> server sends tts_end -> IDLE (mic resumes)
+ *   PLAYING   -> server sends tts_end -> IDLE
  *   any state -> server sends "error" -> ERROR -> IDLE (after 2s)
+ *
+ * Continuous idle streaming for the wake word is disabled: pushing audio
+ * nonstop overwhelmed the device when the backend stalled draining the
+ * socket. The mic only streams while RECORDING.
  */
 #include <Arduino.h>
 #include "config.h"
@@ -36,9 +36,6 @@ static const unsigned long BUTTON_DEBOUNCE_MS = 250;
 void on_state(const std::string& value) {
     Serial.printf("[main] server state: %s\n", value.c_str());
     if (value == "listening") {
-        // Server-initiated (wake word) or echo of our button press. Either
-        // way we are now capturing an utterance.
-        if (g_state == State::IDLE) g_state = State::RECORDING;
         display_set_state(FaceState::LISTENING);
     } else if (value == "thinking") {
         // Server endpointed the utterance (silence) - stop streaming
@@ -55,8 +52,6 @@ void on_state(const std::string& value) {
         if (g_state != State::RECORDING) {
             g_state = State::IDLE;
             display_set_state(FaceState::IDLE);
-            // Keep the mic hot for the wake word
-            if (!audio_is_capturing()) audio_capture_start();
         }
     } else if (value == "error") {
         g_state = State::ERROR_STATE;
@@ -115,8 +110,7 @@ void handle_button() {
 static uint8_t _audio_buf[AUDIO_CHUNK_BYTES];
 
 void stream_audio() {
-    // Stream while RECORDING (command) and while IDLE (wake word listening)
-    if (g_state != State::RECORDING && g_state != State::IDLE) return;
+    if (g_state != State::RECORDING) return;
     if (!ws_is_connected() || !audio_is_capturing()) return;
     size_t n = audio_read_chunk(_audio_buf, AUDIO_CHUNK_BYTES);
     if (n > 0) {
@@ -140,7 +134,6 @@ void setup() {
     wifi_init();
 
     audio_init();
-    audio_capture_start();   // mic always hot while idle - feeds wake word
 
     ws_init(on_state, on_audio, on_tts_end);
     ws_connect();
@@ -160,7 +153,6 @@ void loop() {
     if (g_state == State::ERROR_STATE && millis() - g_error_ts > 2000) {
         g_state = State::IDLE;
         display_set_state(FaceState::IDLE);
-        if (!audio_is_capturing()) audio_capture_start();
     }
 
     delay(5);

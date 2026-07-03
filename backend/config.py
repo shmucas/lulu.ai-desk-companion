@@ -18,10 +18,11 @@ TTS_SAMPLE_RATE = 22050
 #             Bluetooth speaker: just connect it and set it as Mac output)
 PLAYBACK = os.getenv("PLAYBACK", "esp32")
 
-# Wake word ("Lulu"). The device streams mic audio continuously while idle;
-# the backend listens for the name and starts a command without the button.
-# Set WAKE_ENABLED=0 to go back to button-only.
-WAKE_ENABLED = os.getenv("WAKE_ENABLED", "1") == "1"
+# Wake word ("Lulu") - EXPERIMENTAL, off by default. Continuous idle
+# streaming overwhelmed the device (backend wake checks stall the socket,
+# backpressure piles up on the ESP32). Firmware also no longer streams while
+# idle, so enabling this needs a firmware change too. Button-only for now.
+WAKE_ENABLED = os.getenv("WAKE_ENABLED", "0") == "1"
 
 # RMS energy (int16 scale) above which a chunk counts as speech. Raise if
 # background noise triggers wake checks constantly; lower if Lulu misses you.

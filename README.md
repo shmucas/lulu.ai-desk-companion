@@ -2,11 +2,10 @@
 
 An AI desk companion built on a Seeed XIAO ESP32-S3. The device handles all hardware I/O (microphone, speaker, OLED display, button). The Mac acts as the AI brain over local WiFi.
 
-Say "Lulu" (or press the button) and talk. Lulu answers out loud with an animated pixel face: she blinks, glances around, and moves her mouth while speaking.
+Press the button and talk. Lulu answers out loud with an animated pixel face: she blinks, glances around, and moves her mouth while speaking.
 
 ## Features
 
-- Wake word: say "Lulu" - no button needed (button still works)
 - Weather, web search, current time, jokes
 - Timers and reminders, announced out loud when they fire
 - Persistent memory: "remember that my dog is named Biscuit"
@@ -86,17 +85,15 @@ Push-to-talk button      msgs     Piper TTS
 
 1. Start the backend on your Mac: `cd backend && ./run.sh`
 2. Power the ESP32 via USB-C - it connects automatically over WiFi
-3. Say "Lulu" and speak, or press the button
+3. Press the button and speak
 
-While idle the device streams mic audio to the backend, which listens for
-the name. After the wake word (or a button press), speak your request;
-Lulu detects when you stop talking. A button click also force-ends the
-utterance.
+Speak your request after the click; Lulu detects when you stop talking
+(~1.3s of silence). Clicking the button again also force-ends the utterance.
 
 Useful backend env vars:
 
 | Var | Default | Meaning |
 |---|---|---|
-| `WAKE_ENABLED` | `1` | Set `0` for button-only operation |
-| `WAKE_RMS` | `500` | Speech energy threshold; raise in noisy rooms |
 | `PLAYBACK` | `esp32` | `mac` plays TTS on the Mac / Bluetooth speaker |
+| `WAKE_ENABLED` | `0` | Experimental wake word backend, off by default (needs firmware-side idle streaming too, currently disabled) |
+| `WAKE_RMS` | `500` | Speech energy threshold for the experimental wake path |
