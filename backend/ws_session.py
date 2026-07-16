@@ -25,12 +25,13 @@ import time
 import traceback
 
 import numpy as np
+import sounddevice as sd
 from fastapi import WebSocket
 
 import stt
 import tts
 import llm
-from config import PLAYBACK, WAKE_ENABLED, WAKE_RMS
+from config import AUDIO_INPUT, PLAYBACK, WAKE_ENABLED, WAKE_RMS
 
 _TTS_CHUNK_SIZE = 4096
 _BYTES_PER_SEC = 16000 * 2  # 16kHz, 16-bit mono
@@ -86,6 +87,9 @@ class WSSession:
         self._cmd_heard_speech = False
         self._cmd_last_voice_ts = 0.0
 
+        # mac mic capture (AUDIO_INPUT == "mac")
+        self._mac_stream = None
+
     async def handle(self):
         await self._send_state("idle")
         if WAKE_ENABLED:
@@ -103,6 +107,8 @@ class WSSession:
     # ── incoming audio ───────────────────────────────────────────────────────
 
     async def _on_audio(self, chunk: bytes):
+        if AUDIO_INPUT == "mac":
+            return  # audio comes from the Mac mic instead, see _start_mac_recording
         if self._mode == "command":
             await self._command_audio(chunk)
         elif self._mode == "wake":
@@ -151,8 +157,11 @@ class WSSession:
                 await self._reset_to_wake()
             return
 
-        if (now - self._cmd_last_voice_ts >= _ENDPOINT_SILENCE_S
-                or elapsed >= _MAX_UTTERANCE_S):
+        if now - self._cmd_last_voice_ts >= _ENDPOINT_SILENCE_S:
+            _log(f"silence endpoint after {elapsed:.1f}s")
+            await self._process(bytes(self._cmd_buf))
+        elif elapsed >= _MAX_UTTERANCE_S:
+            _log("max utterance length reached")
             await self._process(bytes(self._cmd_buf))
 
     # ── control messages ─────────────────────────────────────────────────────
@@ -164,6 +173,8 @@ class WSSession:
             await self._begin_command()
         elif msg_type == "audio_end":
             if self._mode == "command":
+                if AUDIO_INPUT == "mac":
+                    self._stop_mac_recording()
                 await self._process(bytes(self._cmd_buf))
 
     async def _begin_command(self):
@@ -174,7 +185,27 @@ class WSSession:
         self._cmd_start_ts = now
         self._cmd_heard_speech = False
         self._cmd_last_voice_ts = now
+        if AUDIO_INPUT == "mac":
+            self._start_mac_recording()
         await self._send_state("listening")
+
+    def _start_mac_recording(self):
+        _log("recording from Mac mic")
+        self._cmd_buf.clear()
+
+        def callback(indata, frames, time_info, status):
+            self._cmd_buf.extend(bytes(indata))
+
+        self._mac_stream = sd.RawInputStream(
+            samplerate=16000, channels=1, dtype="int16", callback=callback
+        )
+        self._mac_stream.start()
+
+    def _stop_mac_recording(self):
+        if self._mac_stream:
+            self._mac_stream.stop()
+            self._mac_stream.close()
+            self._mac_stream = None
 
     async def _reset_to_wake(self):
         self._mode = "wake"
@@ -189,7 +220,9 @@ class WSSession:
     async def _process(self, pcm: bytes):
         self._mode = "busy"
 
-        _log(f"utterance ended - {len(pcm)} bytes (~{len(pcm) / _BYTES_PER_SEC:.1f}s)")
+        samples = np.frombuffer(pcm, dtype=np.int16) if pcm else np.zeros(1, dtype=np.int16)
+        _log(f"utterance ended - {len(pcm)} bytes (~{len(pcm) / _BYTES_PER_SEC:.1f}s), "
+             f"rms {_rms(pcm):.0f}, peak {int(np.abs(samples).max())}/32767")
         if len(pcm) < 3200:
             _log("audio too short, ignoring")
             await self._reset_to_wake()
@@ -204,7 +237,7 @@ class WSSession:
             transcript = await loop.run_in_executor(None, stt.transcribe, pcm)
             _log(f"STT ({time.perf_counter() - t0:.1f}s) heard: {transcript!r}")
             if not transcript:
-                _log("empty transcript, back to idle")
+                _log("empty transcript - no speech detected in the audio")
                 await self._reset_to_wake()
                 return
 

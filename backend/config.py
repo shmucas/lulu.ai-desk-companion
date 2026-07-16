@@ -27,3 +27,10 @@ WAKE_ENABLED = os.getenv("WAKE_ENABLED", "0") == "1"
 # RMS energy (int16 scale) above which a chunk counts as speech. Raise if
 # background noise triggers wake checks constantly; lower if Lulu misses you.
 WAKE_RMS = int(os.getenv("WAKE_RMS", "500"))
+
+# Where Lulu's ears are:
+#   "esp32" - use the I2S mic (INMP441) streamed from the device
+#   "mac"   - capture from the Mac's own microphone instead, while the
+#             device's mic wiring is being debugged. Button on the ESP32
+#             still drives listening/thinking state as normal.
+AUDIO_INPUT = os.getenv("AUDIO_INPUT", "esp32")
